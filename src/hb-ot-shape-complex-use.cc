@@ -444,17 +444,15 @@ reorder_syllable (hb_buffer_t *buffer, unsigned int start, unsigned int end)
 
   hb_glyph_info_t *info = buffer->info;
 
-#define BASE_FLAGS (FLAG (USE_B) | FLAG (USE_GB))
-
   /* Move things forward. */
   if (info[start].use_category() == USE_R && end - start > 1)
   {
-    /* Got a repha.  Reorder it to after first base, before first halant. */
+    /* Got a repha.  Reorder it towards the end, but before first halant. */
     for (unsigned int i = start + 1; i < end; i++)
-      if ((FLAG_UNSAFE (info[i].use_category()) & (BASE_FLAGS)) || is_halant (info[i]))
+      if (i == end - 1 || is_halant (info[i]))
       {
-	/* If we hit a halant, move before it; otherwise it's a base: move to it's
-	 * place, and shift things in between backward. */
+	/* If we hit a halant, move before it; otherwise move to the end, and
+	 * shift things in between backward. */
 
 	if (is_halant (info[i]))
 	  i--;
@@ -469,18 +467,15 @@ reorder_syllable (hb_buffer_t *buffer, unsigned int start, unsigned int end)
   }
 
   /* Move things back. */
-  unsigned int j = end;
+  unsigned int j = start;
   for (unsigned int i = start; i < end; i++)
   {
     uint32_t flag = FLAG_UNSAFE (info[i].use_category());
-    if ((flag & (BASE_FLAGS)) || is_halant (info[i]))
+    if (is_halant (info[i]))
     {
-      /* If we hit a halant, move after it; otherwise it's a base: move to it's
-       * place, and shift things in between backward. */
-      if (is_halant (info[i]))
-	j = i + 1;
-      else
-	j = i;
+      /* If we hit a halant, move after it; otherwise move to the beginning, and
+       * shift things in between forward. */
+      j = i + 1;
     }
     else if (((flag) & (FLAG (USE_VPre) | FLAG (USE_VMPre))) &&
 	     /* Only move the first component of a MultipleSubst. */
